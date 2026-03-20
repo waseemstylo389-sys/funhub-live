@@ -1,17 +1,8 @@
 import type { Principal } from "@icp-sdk/core/principal";
-export interface Some<T> {
-    __kind__: "Some";
-    value: T;
-}
-export interface None {
-    __kind__: "None";
-}
+export interface Some<T> { __kind__: "Some"; value: T; }
+export interface None { __kind__: "None"; }
 export type Option<T> = Some<T> | None;
-// Messages use plain text; image messages have text starting with "__IMG__" prefix
-export interface Message {
-    text: string;
-    sender: string;
-}
+export interface Message { text: string; sender: string; }
 export interface ProfileView {
     username: string;
     phone: string;
@@ -42,20 +33,21 @@ export interface LeaderboardEntry {
 export interface backendInterface {
     registerUser(username: string, phone: string): Promise<void>;
     updateProfile(bio: string, avatarUrl: string): Promise<void>;
+    claimAdminByPhone(phone: string): Promise<void>;
+    claimAdmin(): Promise<void>;
+    getProfile(): Promise<ProfileView>;
     claimDailyReward(reward: bigint): Promise<void>;
     spinWheel(reward: bigint): Promise<void>;
     purchaseVIP(): Promise<void>;
-    claimAdmin(): Promise<void>;
-    addCoins(amount: bigint): Promise<void>;
     grantVIP(): Promise<void>;
     grantVIPToUser(principalText: string): Promise<void>;
+    addCoins(amount: bigint): Promise<void>;
     addCoinsToUser(principalText: string, amount: bigint): Promise<void>;
+    sendMessage(text: string): Promise<void>;
+    getMessages(): Promise<Array<Message>>;
+    clearMessages(): Promise<void>;
     getAllUsers(): Promise<Array<UserEntry>>;
     getAppStats(): Promise<AppStats>;
-    clearMessages(): Promise<void>;
-    sendMessage(text: string, imageUrl: string | null): Promise<void>;
-    getMessages(): Promise<Array<Message>>;
-    getProfile(): Promise<ProfileView>;
     getLeaderboard(): Promise<Array<LeaderboardEntry>>;
     playSlots(bet: bigint, won: bigint): Promise<void>;
     playDice(bet: bigint, won: boolean): Promise<void>;

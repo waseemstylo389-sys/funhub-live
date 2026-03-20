@@ -138,11 +138,49 @@ actor {
   };
 
   public shared ({ caller }) func updateProfile(bio : Text, avatarUrl : Text) : async () {
+    // Auto-create profile if not exists, so bio/avatar can be saved anytime
     switch (profiles.get(caller)) {
-      case (null) { Runtime.trap("User not found") };
-      case (_) {
-        bios.add(caller, bio);
-        avatarUrls.add(caller, avatarUrl);
+      case (null) {
+        let newProfile : Profile = {
+          username = "";
+          coins = 0;
+          isVIP = false;
+          lastDailyReward = 0;
+        };
+        profiles.add(caller, newProfile);
+      };
+      case (_) {};
+    };
+    bios.add(caller, bio);
+    avatarUrls.add(caller, avatarUrl);
+  };
+
+  // Allows the current principal to claim admin if they know the admin phone
+  public shared ({ caller }) func claimAdminByPhone(phone : Text) : async () {
+    if (phone != ADMIN_PHONE) {
+      Runtime.trap("Invalid admin phone");
+    };
+    admins.add(caller, true);
+    phones.add(caller, phone);
+    switch (profiles.get(caller)) {
+      case (null) {
+        let newProfile : Profile = {
+          username = "Admin";
+          coins = 999999;
+          isVIP = true;
+          lastDailyReward = 0;
+        };
+        profiles.add(caller, newProfile);
+        adminClaimed := true;
+      };
+      case (?profile) {
+        let updatedProfile : Profile = {
+          profile with
+          isVIP = true;
+          coins = profile.coins + 100000;
+        };
+        profiles.add(caller, updatedProfile);
+        adminClaimed := true;
       };
     };
   };
@@ -341,14 +379,10 @@ actor {
 
   // Image messages: text field uses prefix "__IMG__" followed by the image URL
   // e.g. "__IMG__https://...." means this is an image message
-  public shared ({ caller }) func sendMessage(text : Text, imageUrl : ?Text) : async () {
-    let finalText = switch (imageUrl) {
-      case (null) { text };
-      case (?url) { "__IMG__" # url };
-    };
+  public shared ({ caller }) func sendMessage(text : Text) : async () {
     let message : Message = {
       sender = caller.toText();
-      text = finalText;
+      text = text;
     };
     messages.add(message);
     while (messages.size() > 100) {

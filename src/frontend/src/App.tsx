@@ -485,11 +485,8 @@ function ChatRoom({ actor, username, userAvatarUrl }: ChatRoomProps) {
       { sender: username || "You", text: storedText, time: now },
     ]);
     try {
-      if (isImg) {
-        await (actor as any).sendMessage("", imageUrl);
-      } else {
-        await (actor as any).sendMessage(text, null);
-      }
+      // embed image URL directly in text using __IMG__ prefix
+      await (actor as any).sendMessage(storedText);
     } catch {
       toast.error("Message failed to send");
     } finally {
@@ -825,6 +822,8 @@ export default function App() {
   const [purchasingVip, setPurchasingVip] = useState(false);
   const [showPaymentQR, setShowPaymentQR] = useState(false);
   const [claimingAdmin, setClaimingAdmin] = useState(false);
+  const [adminPhoneInput, setAdminPhoneInput] = useState("");
+  const [claimingByPhone, setClaimingByPhone] = useState(false);
   const [grantingVip, setGrantingVip] = useState(false);
   const [addingCoins, setAddingCoins] = useState(false);
   const [adminCoinsAmount, setAdminCoinsAmount] = useState("100000");
@@ -1003,6 +1002,23 @@ export default function App() {
       toast.error("Admin claim failed. Another admin may already exist.");
     } finally {
       setClaimingAdmin(false);
+    }
+  };
+
+  const handleClaimByPhone = async () => {
+    if (!actor || claimingByPhone || !adminPhoneInput.trim()) return;
+    setClaimingByPhone(true);
+    try {
+      await (actor as any).claimAdminByPhone(adminPhoneInput.trim());
+      await queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("👑 Admin access granted!", {
+        description: "Aap ab Admin hain!",
+      });
+      setAdminPhoneInput("");
+    } catch {
+      toast.error("Invalid phone number. Admin access denied.");
+    } finally {
+      setClaimingByPhone(false);
     }
   };
 
@@ -2170,6 +2186,65 @@ export default function App() {
                       )}
                     </Button>
                   </div>
+
+                  {/* Admin Login by Phone */}
+                  {!isAdmin && (
+                    <div
+                      className="rounded-2xl p-5 mb-5"
+                      style={{
+                        background: "rgba(30,41,59,0.9)",
+                        border: "1px solid rgba(139,92,246,0.35)",
+                      }}
+                    >
+                      <h3
+                        className="text-sm font-black text-foreground tracking-widest uppercase mb-1"
+                        style={{ color: "#c4b5fd" }}
+                      >
+                        📱 Phone se Admin Login
+                      </h3>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Apna registered admin phone number dalo aur seedha admin
+                        ban jao.
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Admin phone number (10 digits)"
+                          type="tel"
+                          maxLength={10}
+                          value={adminPhoneInput}
+                          onChange={(e) =>
+                            setAdminPhoneInput(
+                              e.target.value.replace(/[^0-9]/g, ""),
+                            )
+                          }
+                          onKeyDown={(e) =>
+                            e.key === "Enter" && handleClaimByPhone()
+                          }
+                          className="flex-1 bg-background/50 border-purple-500/40 text-center font-bold tracking-widest"
+                          style={{ fontSize: "1rem" }}
+                        />
+                        <Button
+                          onClick={handleClaimByPhone}
+                          disabled={
+                            claimingByPhone || !adminPhoneInput.trim() || !actor
+                          }
+                          style={{
+                            background:
+                              "linear-gradient(135deg,#8b5cf6,#6d28d9)",
+                            color: "#fff",
+                            border: "none",
+                            minWidth: "80px",
+                          }}
+                        >
+                          {claimingByPhone ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            "Login"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Admin Controls - only if admin */}
                   {isAdmin && (
